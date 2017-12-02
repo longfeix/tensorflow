@@ -187,13 +187,13 @@ def create_keras_model(fingerprint_input, model_settings, is_training):
   """
 
   x = Reshape((input_time_size, input_frequency_size, 1))(fingerprint_input)
-  x = Conv2D(64, (20, 8), activation='relu', padding='same')(x)
+  x = Conv2D(64, (8, 20), activation='relu', padding='same')(x)
   x = MaxPooling2D(pool_size=(2, 2), padding='same')(x)
   if is_training:
     x = tf.nn.dropout(x, dropout_prob)
   #x = Dropout(dropout_prob)(x)
 
-  x = Conv2D(64, (10, 4), activation='relu', padding='same')(x)
+  x = Conv2D(64, (4, 10), activation='relu', padding='same')(x)
   x = MaxPooling2D(pool_size=(2, 2), padding='same')(x)
   if is_training:
     x = tf.nn.dropout(x, dropout_prob)
