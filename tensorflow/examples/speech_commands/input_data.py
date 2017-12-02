@@ -356,6 +356,7 @@ class AudioProcessor(object):
     scaled_foreground = tf.multiply(wav_decoder.audio,
                                     self.foreground_volume_placeholder_)
     # Shift the sample's start position, and pad any gaps with zeros.
+    # NOTE(longfeix) why padding
     self.time_shift_padding_placeholder_ = tf.placeholder(tf.int32, [2, 2])
     self.time_shift_offset_placeholder_ = tf.placeholder(tf.int32, [2])
     padded_foreground = tf.pad(
