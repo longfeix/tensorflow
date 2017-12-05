@@ -130,13 +130,12 @@ def main(_):
     K.set_session(sess)
 
     tf.logging.info("using keras model")
-    logits, dropout_prob = models.create_keras_model(fingerprint_input, model_settings, True)
-  else:
-    logits, dropout_prob = models.create_model(
-        fingerprint_input,
-        model_settings,
-        FLAGS.model_architecture,
-        is_training=True)
+
+  logits, dropout_prob = models.create_model(
+      fingerprint_input,
+      model_settings,
+      FLAGS.model_architecture,
+      is_training=True)
 
   # Define loss and optimizer
   ground_truth_input = tf.placeholder(
@@ -432,10 +431,10 @@ if __name__ == '__main__':
       default=False,
       help='Whether to check for invalid numbers during processing')
   parser.add_argument(
-    '--use_keras',
-    type=bool,
-    default=True,
-    help='Whether to use keras')
+      '--use_keras',
+      type=bool,
+      default=True,
+      help='Whether to use keras')
 
   FLAGS, unparsed = parser.parse_known_args()
   tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)

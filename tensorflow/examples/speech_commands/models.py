@@ -23,8 +23,7 @@ import math
 
 import tensorflow as tf
 
-from keras.models import Sequential
-from keras.layers import Conv2D, Reshape, MaxPooling2D, Dropout, Dense, Flatten
+from keras.layers import LSTM, Conv2D, Reshape, MaxPooling2D, Dropout, Dense, Flatten, ConvLSTM2D
 
 def prepare_model_settings(label_count, sample_rate, clip_duration_ms,
                            window_size_ms, window_stride_ms,
@@ -108,6 +107,12 @@ def create_model(fingerprint_input, model_settings, model_architecture,
   elif model_architecture == 'low_latency_svdf':
     return create_low_latency_svdf_model(fingerprint_input, model_settings,
                                          is_training, runtime_settings)
+  elif model_architecture == 'conv_keras':
+    return create_keras_model(fingerprint_input, model_settings,
+                                         is_training)
+  elif model_architecture == 'lstm':
+    return create_lstm_model(fingerprint_input, model_settings,
+                            is_training)
   else:
     raise Exception('model_architecture argument "' + model_architecture +
                     '" not recognized, should be one of "single_fc", "conv",' +
@@ -164,6 +169,64 @@ def create_single_fc_model(fingerprint_input, model_settings, is_training):
     return logits
 
 
+def create_convlstm_model(fingerprint_input, model_settings, is_training):
+
+  tf.logging.info("conv lstm is used")
+  if is_training:
+    dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
+
+  input_frequency_size = model_settings['dct_coefficient_count']
+  input_time_size = model_settings['spectrogram_length']
+  label_count = model_settings['label_count']
+
+  x = Reshape((14, int(input_time_size/14), input_frequency_size, 1))(fingerprint_input)
+  x = ConvLSTM2D(64, (8, 20))(x)
+  x = MaxPooling2D(pool_size=(3, 3), padding='same')(x)
+  if is_training:
+    x = tf.nn.dropout(x, dropout_prob)
+
+  shape = x.get_shape().as_list() #5d
+  tf.logging.info("second layer shape:" + str(shape))
+
+  x = Conv2D(64, (2, 10), activation='relu', padding='same')(x)
+  x = MaxPooling2D(pool_size=(2, 2), padding='same')(x)
+  if is_training:
+    x = tf.nn.dropout(x, dropout_prob)
+
+  x = Flatten()(x)
+  x = Dense(label_count, activation='tanh')(x)
+
+  if is_training:
+    return x, dropout_prob
+  else:
+    return x
+
+def create_lstm_model(fingerprint_input, model_settings, is_training):
+
+  tf.logging.info("lstm is used")
+  if is_training:
+    dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
+
+  input_frequency_size = model_settings['dct_coefficient_count']
+  input_time_size = model_settings['spectrogram_length']
+  label_count = model_settings['label_count']
+
+  x = Reshape((input_time_size, input_frequency_size))(fingerprint_input)
+  x = LSTM(128)(x)
+
+  if is_training:
+    x = tf.nn.dropout(x, dropout_prob)
+
+  shape = x.get_shape().as_list() #5d
+  tf.logging.info("second layer shape:" + str(shape))
+
+  x = Dense(label_count, activation='tanh')(x)
+
+  if is_training:
+    return x, dropout_prob
+  else:
+    return x
+
 def create_keras_model(fingerprint_input, model_settings, is_training):
   if is_training:
     dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
@@ -187,7 +250,7 @@ def create_keras_model(fingerprint_input, model_settings, is_training):
   """
 
   x = Reshape((input_time_size, input_frequency_size, 1))(fingerprint_input)
-  x = Conv2D(64, (8, 20), activation='relu', padding='same')(x)
+  x = Conv2D(64, (8, 40), activation='relu', padding='same')(x)
   x = MaxPooling2D(pool_size=(2, 2), padding='same')(x)
   if is_training:
     x = tf.nn.dropout(x, dropout_prob)
