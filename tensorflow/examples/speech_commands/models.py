@@ -212,7 +212,7 @@ def create_lstm_model(fingerprint_input, model_settings, is_training):
   label_count = model_settings['label_count']
 
   x = Reshape((input_time_size, input_frequency_size))(fingerprint_input)
-  x = LSTM(128)(x)
+  x = LSTM(1024)(x)
 
   if is_training:
     x = tf.nn.dropout(x, dropout_prob)
