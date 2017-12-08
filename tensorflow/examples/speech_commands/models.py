@@ -25,6 +25,8 @@ import tensorflow as tf
 
 from keras.layers import LSTM, Conv2D, Reshape, MaxPooling2D, Dropout, Dense, Flatten, ConvLSTM2D
 
+import resnet_model
+
 def prepare_model_settings(label_count, sample_rate, clip_duration_ms,
                            window_size_ms, window_stride_ms,
                            dct_coefficient_count):
@@ -113,6 +115,8 @@ def create_model(fingerprint_input, model_settings, model_architecture,
   elif model_architecture == 'lstm':
     return create_lstm_model(fingerprint_input, model_settings,
                             is_training)
+  elif model_architecture == 'resnet':
+    return create_resnet_model(fingerprint_input, model_settings, is_training)
   else:
     raise Exception('model_architecture argument "' + model_architecture +
                     '" not recognized, should be one of "single_fc", "conv",' +
@@ -226,6 +230,27 @@ def create_lstm_model(fingerprint_input, model_settings, is_training):
     return x, dropout_prob
   else:
     return x
+
+def create_resnet_model(fingerprint_input, model_settings, is_training):
+  label_count = model_settings['label_count']
+  input_frequency_size = model_settings['dct_coefficient_count']
+  input_time_size = model_settings['spectrogram_length']
+  if is_training:
+    dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
+
+  fingerprint_4d = tf.reshape(fingerprint_input,
+                              [-1, input_time_size, input_frequency_size, 1])
+  network = resnet_model.imagenet_resnet_v2(50, label_count, "channels_last")
+  logits = network(
+    inputs=fingerprint_4d, is_training=is_training)
+  #logits = Dense(label_count)(logits)
+
+  tf.logging.info("resnet logits dimension " + str(logits.get_shape().as_list()))
+
+  if is_training:
+    return logits, dropout_prob
+  else:
+    return logits
 
 def create_keras_model(fingerprint_input, model_settings, is_training):
   if is_training:
